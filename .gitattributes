@@ -1,0 +1,33 @@
+# 自动检测文本文件
+* text=auto
+
+# 文本文件应该使用LF
+*.py text eol=lf
+*.js text eol=lf
+*.json text eol=lf
+*.md text eol=lf
+*.txt text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf
+*.xml text eol=lf
+*.html text eol=lf
+*.css text eol=lf
+*.csv text eol=lf
+
+# Shell脚本
+*.sh text eol=lf
+
+# Windows特定文件使用CRLF
+*.bat text eol=crlf
+*.ps1 text eol=crlf
+
+# 二进制文件
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.pdf binary
+*.zip binary
+*.tar binary
+*.gz binary
