@@ -1,0 +1,31 @@
+{
+  "name": "deepseek-extractor-extension",
+  "version": "1.0.0",
+  "description": "DeepSeek对话文档化浏览器扩展",
+  "main": "dist/background.js",
+  "scripts": {
+    "dev": "webpack --mode development --watch",
+    "build": "webpack --mode production",
+    "test": "jest",
+    "lint": "eslint src/**/*.ts",
+    "format": "prettier --write src/**/*.ts"
+  },
+  "devDependencies": {
+    "@types/chrome": "^0.0.250",
+    "@typescript-eslint/eslint-plugin": "^6.13.2",
+    "@typescript-eslint/parser": "^6.13.2",
+    "copy-webpack-plugin": "^11.0.0",
+    "css-loader": "^6.8.1",
+    "eslint": "^8.55.0",
+    "html-webpack-plugin": "^5.5.3",
+    "prettier": "^3.1.0",
+    "style-loader": "^3.3.3",
+    "ts-loader": "^9.5.1",
+    "typescript": "^5.3.2",
+    "webpack": "^5.89.0",
+    "webpack-cli": "^5.1.4"
+  },
+  "dependencies": {
+    "dompurify": "^3.0.5"
+  }
+}

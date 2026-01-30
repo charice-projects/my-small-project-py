@@ -1,0 +1,68 @@
+# config.yaml - 简化的个人使用配置
+
+# 输入输出路径
+paths:
+  input_dir: "./html_conversations"    # HTML文件目录
+  output_dir: "./knowledge_base"       # 输出目录
+  failed_dir: "./failed"              # 处理失败的文件
+
+# 解析配置
+parsing:
+  # DeepSeek特定选择器（可根据实际HTML结构调整）
+  user_selectors:
+    - '[class*="user"]'
+    - '[class*="human"]'
+    - 'div[data-role="user"]'
+    - '.message-user'
+    - '.human-message'
+  
+  ai_selectors:
+    - '[class*="assistant"]'
+    - '[class*="ai"]'
+    - 'div[data-role="assistant"]'
+    - '.message-assistant'
+    - '.ai-message'
+  
+  # 内容处理
+  preserve_code_blocks: true
+  extract_tables: true
+  clean_html_tags: true
+  remove_emojis: false
+  max_content_length: 10000
+
+# 输出格式（按照第二份文档）
+output:
+  format: "optimized_markdown"  # 使用优化格式
+  
+  # 标题格式
+  title_format: "[{dialog_id}-{round_id}] {keywords}"
+  max_title_length: 80
+  
+  # 折叠设置
+  fold_user_queries: true
+  fold_long_code_blocks: 30    # 超过30行的代码块折叠
+  
+  # 标记点设置
+  add_round_markers: true
+  add_metadata_comments: true
+  
+  # 空行设置（按照第二份文档的视觉节奏规则）
+  blank_lines:
+    between_rounds: 3
+    before_user_query: 0
+    after_user_query: 1
+    before_ai_response: 0
+
+# 批量处理
+batch:
+  overwrite_existing: false
+  stop_on_error: false          # 单个失败是否停止
+  generate_report: true
+  parallel_processing: false    # 并行处理（实验性）
+
+# 日志
+logging:
+  level: "INFO"
+  file: "deepseek_parser.log"
+  max_file_size: 10485760  # 10MB
+  backup_count: 5

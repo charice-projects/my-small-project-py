@@ -1,0 +1,8 @@
+beautifulsoup4>=4.12.0
+lxml>=4.9.0
+PyYAML>=6.0
+markdown>=3.5.0
+html2text>=2020.1.16
+tqdm>=4.65.0  # 进度条
+colorama>=0.4.6  # 彩色输出
+python-dateutil>=2.8.2

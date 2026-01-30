@@ -1,0 +1,43 @@
+{
+  "manifest_version": 3,
+  "name": "DeepSeek对话文档化助手",
+  "version": "1.0.0",
+  "description": "智能提取DeepSeek对话，生成结构化文档",
+  "permissions": [
+    "activeTab",
+    "storage",
+    "downloads",
+    "scripting"
+  ],
+  "host_permissions": [
+    "https://chat.deepseek.com/*"
+  ],
+  "background": {
+    "service_worker": "dist/background.js",
+    "type": "module"
+  },
+  "action": {
+    "default_popup": "dist/popup/index.html",
+    "default_title": "DeepSeek对话提取器"
+  },
+  "content_scripts": [
+    {
+      "matches": ["https://chat.deepseek.com/*"],
+      "js": ["dist/content.js"],
+      "css": ["dist/content.css"],
+      "run_at": "document_idle"
+    }
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": ["assets/*", "dist/*"],
+      "matches": ["https://chat.deepseek.com/*"]
+    }
+  ],
+  "icons": {
+    "16": "assets/icons/icon16.png",
+    "48": "assets/icons/icon48.png",
+    "128": "assets/icons/icon128.png"
+  },
+  "options_page": "dist/options/index.html"
+}
