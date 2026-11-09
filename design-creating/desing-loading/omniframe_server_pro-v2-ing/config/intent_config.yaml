@@ -1,0 +1,99 @@
+# 意图解析器配置文件
+version: "1.1"
+last_updated: "2026-01-30"
+
+# 命令映射配置
+command_mappings:
+  system_info:
+    aliases: ["状态", "系统信息", "健康检查", "show status", "system info"]
+    action: "system_info"
+    parameters: {}
+  
+  list:
+    aliases: ["列表", "文件列表", "显示文件", "list", "ls", "dir"]
+    action: "list"
+    parameters:
+      recursive: false
+      limit: 100
+  
+  search:
+    aliases: ["搜索", "查找", "查询", "search", "find", "locate"]
+    action: "search"
+    parameters:
+      recursive: true
+      case_sensitive: false
+  
+  recent:
+    aliases: ["最近", "最近文件", "最近访问", "recent", "recent files"]
+    action: "recent"
+    parameters:
+      limit: 20
+  
+  history:
+    aliases: ["历史", "历史记录", "命令历史", "history", "cmd history"]
+    action: "history"
+    parameters:
+      limit: 50
+  
+  tree:
+    aliases: ["目录树", "树形结构", "文件夹树", "tree", "directory tree"]
+    action: "tree"
+    parameters:
+      max_depth: 3
+  
+  index:
+    aliases: ["索引", "生成索引", "扫描文件", "index", "generate index"]
+    action: "index"
+    parameters:
+      force: false
+      incremental: true
+
+# 文件类型配置
+file_types:
+  image:
+    extensions: [".jpg", ".jpeg", ".png", ".gif", ".bmp", ".svg", ".webp"]
+    aliases: ["图片", "照片", "图像", "image", "photo"]
+  
+  document:
+    extensions: [".pdf", ".doc", ".docx", ".txt", ".md", ".rtf"]
+    aliases: ["文档", "文件", "文本", "document", "file"]
+  
+  code:
+    extensions: [".py", ".js", ".java", ".cpp", ".c", ".h", ".html", ".css"]
+    aliases: ["代码", "程序", "源码", "code", "source"]
+  
+  video:
+    extensions: [".mp4", ".avi", ".mov", ".mkv", ".flv"]
+    aliases: ["视频", "影片", "电影", "video", "movie"]
+  
+  audio:
+    extensions: [".mp3", ".wav", ".flac", ".aac", ".ogg"]
+    aliases: ["音频", "音乐", "声音", "audio", "music"]
+  
+  archive:
+    extensions: [".zip", ".rar", ".7z", ".tar", ".gz"]
+    aliases: ["压缩包", "压缩文件", "打包文件", "archive", "zip"]
+
+# 参数默认值
+default_parameters:
+  recursive: false
+  limit: 100
+  case_sensitive: false
+  max_depth: 3
+  force: false
+  incremental: true
+
+# 确认提示消息
+confirmation_messages:
+  delete: "确认删除 {target} 吗？此操作不可撤销。"
+  index: "重新生成索引可能需要一些时间，确认继续吗？"
+  archive: "确认打包 {target} 吗？"
+  system_shutdown: "确认关闭服务器吗？"
+
+# 错误消息模板
+error_messages:
+  parse_error: "无法理解命令: {command}"
+  missing_parameter: "缺少必要参数: {parameter}"
+  invalid_path: "无效的路径: {path}"
+  permission_denied: "没有权限访问: {path}"
+  file_not_found: "文件不存在: {path}"

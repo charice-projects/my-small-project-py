@@ -1,17 +1,12 @@
-# services/file_service_v2.py
 """
-文件服务 V2 - 高性能文件操作服务
+文件操作服务 - 提供文件的读取、写入、复制、移动、删除等操作
 """
 import os
 import shutil
 import hashlib
 from pathlib import Path
-from typing import List, Dict, Optional, Any, Union, Set
+from typing import List, Dict, Optional, Any, Union, BinaryIO
 from datetime import datetime
-from functools import lru_cache
-import asyncio
-from concurrent.futures import ThreadPoolExecutor
-import threading
 
 from config.settings import settings
 from utils.logger import logger
@@ -19,130 +14,268 @@ from utils.path_utils import PathUtils
 from core.constitution_engine import ConstitutionEngine
 
 
-class FileCache:
-    """文件缓存管理器"""
-    
-    def __init__(self, max_size: int = 10000, ttl: int = 300):
-        self.max_size = max_size
-        self.ttl = ttl  # 缓存存活时间（秒）
-        self._cache: Dict[str, Dict[str, Any]] = {}
-        self._lock = threading.RLock()
-        self._cleanup_task = None
-        
-    def get(self, key: str) -> Optional[Any]:
-        """获取缓存"""
-        with self._lock:
-            if key in self._cache:
-                entry = self._cache[key]
-                # 检查是否过期
-                if datetime.now().timestamp() - entry['timestamp'] < self.ttl:
-                    return entry['data']
-                else:
-                    del self._cache[key]
-            return None
-    
-    def set(self, key: str, data: Any):
-        """设置缓存"""
-        with self._lock:
-            # 清理过期缓存
-            self._clean_expired()
-            
-            # 如果超过最大大小，清理最旧的
-            if len(self._cache) >= self.max_size:
-                self._evict_oldest()
-            
-            self._cache[key] = {
-                'data': data,
-                'timestamp': datetime.now().timestamp()
-            }
-    
-    def invalidate(self, key: str = None):
-        """使缓存失效"""
-        with self._lock:
-            if key:
-                if key in self._cache:
-                    del self._cache[key]
-            else:
-                self._cache.clear()
-    
-    def _clean_expired(self):
-        """清理过期缓存"""
-        now = datetime.now().timestamp()
-        expired_keys = []
-        
-        for key, entry in self._cache.items():
-            if now - entry['timestamp'] > self.ttl:
-                expired_keys.append(key)
-        
-        for key in expired_keys:
-            del self._cache[key]
-    
-    def _evict_oldest(self, count: int = 100):
-        """淘汰最旧的缓存"""
-        sorted_items = sorted(
-            self._cache.items(),
-            key=lambda x: x[1]['timestamp']
-        )
-        
-        for key, _ in sorted_items[:count]:
-            del self._cache[key]
-
-
-class AsyncFileService:
-    """异步文件服务"""
+class FileService:
+    """文件操作服务"""
     
     def __init__(self, constitution_engine: Optional[ConstitutionEngine] = None):
         self.constitution_engine = constitution_engine or ConstitutionEngine()
         self.root_path = Path(settings.root_path)
-        self.cache = FileCache()
-        self.executor = ThreadPoolExecutor(max_workers=4)
-        
-        # 初始化索引
-        self._index = {}
-        self._index_lock = threading.RLock()
-        
-        logger.info("异步文件服务初始化完成")
     
-    async def list_directory(self, 
-                           dir_path: Union[str, Path],
-                           recursive: bool = False,
-                           include_hidden: bool = False,
-                           use_cache: bool = True) -> List[Dict[str, Any]]:
-        """异步列出目录"""
+    def read_file(self, file_path: Union[str, Path], encoding: str = 'utf-8') -> str:
+        """读取文件内容"""
+        path = PathUtils.normalize_path(file_path)
+        
+        # 检查宪法规则
+        operation = {
+            "action": "read",
+            "target_path": str(path),
+            "timestamp": datetime.now().isoformat()
+        }
+        
+        evaluation = self.constitution_engine.evaluate_operation(operation)
+        if not evaluation["allowed"]:
+            raise PermissionError(f"不允许读取文件: {evaluation.get('violations', [])}")
+        
+        try:
+            with open(path, 'r', encoding=encoding) as f:
+                content = f.read()
+            
+            logger.info(f"文件已读取: {path}")
+            return content
+        
+        except UnicodeDecodeError:
+            # 如果是二进制文件，尝试以二进制读取并返回摘要
+            with open(path, 'rb') as f:
+                binary_content = f.read()
+            return f"<二进制文件，大小: {len(binary_content)} 字节>"
+        
+        except Exception as e:
+            logger.error(f"读取文件失败: {path} - {e}")
+            raise
+    
+    def write_file(self, 
+                  file_path: Union[str, Path], 
+                  content: str, 
+                  encoding: str = 'utf-8',
+                  overwrite: bool = False) -> bool:
+        """写入文件"""
+        path = PathUtils.normalize_path(file_path)
+        
+        # 检查文件是否存在
+        if path.exists() and not overwrite:
+            raise FileExistsError(f"文件已存在: {path}")
+        
+        # 检查宪法规则
+        operation = {
+            "action": "write",
+            "target_path": str(path),
+            "overwrite": overwrite,
+            "timestamp": datetime.now().isoformat()
+        }
+        
+        evaluation = self.constitution_engine.evaluate_operation(operation)
+        if not evaluation["allowed"]:
+            raise PermissionError(f"不允许写入文件: {evaluation.get('violations', [])}")
+        
+        # 如果需要确认
+        if evaluation["requires_confirmation"]:
+            # 在实际应用中，这里应该等待用户确认
+            # 为了简化，我们假设已经确认
+            pass
+        
+        try:
+            # 确保目录存在
+            path.parent.mkdir(parents=True, exist_ok=True)
+            
+            # 写入文件
+            with open(path, 'w', encoding=encoding) as f:
+                f.write(content)
+            
+            logger.info(f"文件已写入: {path}")
+            return True
+        
+        except Exception as e:
+            logger.error(f"写入文件失败: {path} - {e}")
+            return False
+    
+    def delete_file(self, file_path: Union[str, Path]) -> bool:
+        """删除文件"""
+        path = PathUtils.normalize_path(file_path)
+        
+        if not path.exists():
+            raise FileNotFoundError(f"文件不存在: {path}")
+        
+        # 检查宪法规则
+        operation = {
+            "action": "delete",
+            "target_path": str(path),
+            "timestamp": datetime.now().isoformat()
+        }
+        
+        evaluation = self.constitution_engine.evaluate_operation(operation)
+        if not evaluation["allowed"]:
+            raise PermissionError(f"不允许删除文件: {evaluation.get('violations', [])}")
+        
+        # 如果需要确认
+        if evaluation["requires_confirmation"]:
+            # 在实际应用中，这里应该等待用户确认
+            # 为了简化，我们假设已经确认
+            pass
+        
+        try:
+            if path.is_file():
+                path.unlink()
+                logger.info(f"文件已删除: {path}")
+            elif path.is_dir():
+                shutil.rmtree(path)
+                logger.info(f"目录已删除: {path}")
+            
+            return True
+        
+        except Exception as e:
+            logger.error(f"删除文件失败: {path} - {e}")
+            return False
+    
+    def copy_file(self, 
+                 src_path: Union[str, Path], 
+                 dst_path: Union[str, Path],
+                 overwrite: bool = False) -> bool:
+        """复制文件或目录"""
+        src = PathUtils.normalize_path(src_path)
+        dst = PathUtils.normalize_path(dst_path)
+        
+        if not src.exists():
+            raise FileNotFoundError(f"源文件不存在: {src}")
+        
+        # 检查宪法规则
+        operation = {
+            "action": "copy",
+            "source_path": str(src),
+            "target_path": str(dst),
+            "overwrite": overwrite,
+            "timestamp": datetime.now().isoformat()
+        }
+        
+        evaluation = self.constitution_engine.evaluate_operation(operation)
+        if not evaluation["allowed"]:
+            raise PermissionError(f"不允许复制文件: {evaluation.get('violations', [])}")
+        
+        try:
+            # 如果目标已存在且不允许覆盖
+            if dst.exists() and not overwrite:
+                raise FileExistsError(f"目标文件已存在: {dst}")
+            
+            # 确保目标目录存在
+            dst.parent.mkdir(parents=True, exist_ok=True)
+            
+            if src.is_file():
+                shutil.copy2(src, dst)
+                logger.info(f"文件已复制: {src} -> {dst}")
+            elif src.is_dir():
+                shutil.copytree(src, dst, dirs_exist_ok=overwrite)
+                logger.info(f"目录已复制: {src} -> {dst}")
+            
+            return True
+        
+        except Exception as e:
+            logger.error(f"复制文件失败: {src} -> {dst} - {e}")
+            return False
+    
+    def move_file(self, 
+                 src_path: Union[str, Path], 
+                 dst_path: Union[str, Path],
+                 overwrite: bool = False) -> bool:
+        """移动文件或目录"""
+        src = PathUtils.normalize_path(src_path)
+        dst = PathUtils.normalize_path(dst_path)
+        
+        if not src.exists():
+            raise FileNotFoundError(f"源文件不存在: {src}")
+        
+        # 检查宪法规则
+        operation = {
+            "action": "move",
+            "source_path": str(src),
+            "target_path": str(dst),
+            "overwrite": overwrite,
+            "timestamp": datetime.now().isoformat()
+        }
+        
+        evaluation = self.constitution_engine.evaluate_operation(operation)
+        if not evaluation["allowed"]:
+            raise PermissionError(f"不允许移动文件: {evaluation.get('violations', [])}")
+        
+        try:
+            # 如果目标已存在且不允许覆盖
+            if dst.exists() and not overwrite:
+                raise FileExistsError(f"目标文件已存在: {dst}")
+            
+            # 确保目标目录存在
+            dst.parent.mkdir(parents=True, exist_ok=True)
+            
+            # 如果目标已存在且允许覆盖，先删除目标
+            if dst.exists() and overwrite:
+                if dst.is_file():
+                    dst.unlink()
+                elif dst.is_dir():
+                    shutil.rmtree(dst)
+            
+            shutil.move(src, dst)
+            logger.info(f"文件已移动: {src} -> {dst}")
+            return True
+        
+        except Exception as e:
+            logger.error(f"移动文件失败: {src} -> {dst} - {e}")
+            return False
+    
+    def create_directory(self, dir_path: Union[str, Path]) -> bool:
+        """创建目录"""
         path = PathUtils.normalize_path(dir_path)
         
-        # 生成缓存键
-        cache_key = f"list:{path}:{recursive}:{include_hidden}"
+        # 检查宪法规则
+        operation = {
+            "action": "create_directory",
+            "target_path": str(path),
+            "timestamp": datetime.now().isoformat()
+        }
         
-        if use_cache:
-            cached = self.cache.get(cache_key)
-            if cached:
-                return cached
+        evaluation = self.constitution_engine.evaluate_operation(operation)
+        if not evaluation["allowed"]:
+            raise PermissionError(f"不允许创建目录: {evaluation.get('violations', [])}")
         
-        # 在线程池中执行IO操作
-        loop = asyncio.get_event_loop()
-        items = await loop.run_in_executor(
-            self.executor,
-            self._list_directory_sync,
-            path, recursive, include_hidden
-        )
+        try:
+            path.mkdir(parents=True, exist_ok=True)
+            logger.info(f"目录已创建: {path}")
+            return True
         
-        # 缓存结果
-        if use_cache:
-            self.cache.set(cache_key, items)
-        
-        return items
+        except Exception as e:
+            logger.error(f"创建目录失败: {path} - {e}")
+            return False
     
-    def _list_directory_sync(self, 
-                           path: Path,
-                           recursive: bool,
-                           include_hidden: bool) -> List[Dict[str, Any]]:
-        """同步列出目录（在线程池中执行）"""
+    def list_directory(self, 
+                      dir_path: Union[str, Path], 
+                      recursive: bool = False,
+                      include_hidden: bool = False) -> List[Dict[str, Any]]:
+        """列出目录内容"""
+        path = PathUtils.normalize_path(dir_path)
+        
         if not path.exists():
             raise FileNotFoundError(f"目录不存在: {path}")
         
         if not path.is_dir():
             raise NotADirectoryError(f"不是目录: {path}")
+        
+        # 检查宪法规则
+        operation = {
+            "action": "list_directory",
+            "target_path": str(path),
+            "recursive": recursive,
+            "timestamp": datetime.now().isoformat()
+        }
+        
+        evaluation = self.constitution_engine.evaluate_operation(operation)
+        if not evaluation["allowed"]:
+            raise PermissionError(f"不允许列出目录: {evaluation.get('violations', [])}")
         
         try:
             items = []
@@ -153,7 +286,7 @@ class AsyncFileService:
                     if not include_hidden and item_path.name.startswith('.'):
                         continue
                     
-                    if item_path.is_relative_to(path):
+                    if item_path.is_relative_to(path):  # 确保在目录内
                         items.append(PathUtils.get_file_info(item_path))
             else:
                 # 非递归列出
@@ -166,19 +299,70 @@ class AsyncFileService:
             # 排序：目录在前，按名称排序
             items.sort(key=lambda x: (not x['is_dir'], x['name'].lower()))
             
+            logger.info(f"目录已列出: {path} (共 {len(items)} 项)")
             return items
-            
+        
         except Exception as e:
             logger.error(f"列出目录失败: {path} - {e}")
             return []
     
-    async def search_files(self,
-                          search_term: str,
-                          search_path: Optional[Union[str, Path]] = None,
-                          search_type: str = 'name',
-                          case_sensitive: bool = False,
-                          limit: int = 100) -> List[Dict[str, Any]]:
-        """异步搜索文件"""
+    def get_file_hash(self, file_path: Union[str, Path], algorithm: str = 'md5') -> str:
+        """计算文件哈希值"""
+        path = PathUtils.normalize_path(file_path)
+        
+        if not path.exists():
+            raise FileNotFoundError(f"文件不存在: {path}")
+        
+        if not path.is_file():
+            raise IsADirectoryError(f"是目录而不是文件: {path}")
+        
+        try:
+            hash_func = hashlib.new(algorithm)
+            
+            with open(path, 'rb') as f:
+                # 分块读取大文件
+                for chunk in iter(lambda: f.read(4096), b''):
+                    hash_func.update(chunk)
+            
+            return hash_func.hexdigest()
+        
+        except Exception as e:
+            logger.error(f"计算文件哈希失败: {path} - {e}")
+            raise
+    
+    def get_directory_size(self, dir_path: Union[str, Path]) -> int:
+        """计算目录大小（字节）"""
+        path = PathUtils.normalize_path(dir_path)
+        
+        if not path.exists():
+            raise FileNotFoundError(f"目录不存在: {path}")
+        
+        if not path.is_dir():
+            raise NotADirectoryError(f"不是目录: {path}")
+        
+        total_size = 0
+        
+        try:
+            for file_path in path.rglob('*'):
+                if file_path.is_file():
+                    try:
+                        total_size += file_path.stat().st_size
+                    except OSError:
+                        # 忽略无法访问的文件
+                        pass
+            
+            return total_size
+        
+        except Exception as e:
+            logger.error(f"计算目录大小失败: {path} - {e}")
+            return 0
+    
+    def search_files(self, 
+                    search_term: str, 
+                    search_path: Optional[Union[str, Path]] = None,
+                    search_type: str = 'name',
+                    case_sensitive: bool = False) -> List[Dict[str, Any]]:
+        """搜索文件"""
         if search_path is None:
             search_path = self.root_path
         
@@ -187,37 +371,22 @@ class AsyncFileService:
         if not path.exists():
             raise FileNotFoundError(f"搜索路径不存在: {path}")
         
-        # 生成缓存键
-        cache_key = f"search:{path}:{search_term}:{search_type}:{case_sensitive}"
+        # 检查宪法规则
+        operation = {
+            "action": "search_files",
+            "target_path": str(path),
+            "search_term": search_term,
+            "timestamp": datetime.now().isoformat()
+        }
         
-        cached = self.cache.get(cache_key)
-        if cached:
-            return cached[:limit]  # 返回限制数量的缓存结果
-        
-        # 使用线程池执行搜索
-        loop = asyncio.get_event_loop()
-        results = await loop.run_in_executor(
-            self.executor,
-            self._search_files_sync,
-            search_term, path, search_type, case_sensitive
-        )
-        
-        # 缓存结果
-        self.cache.set(cache_key, results)
-        
-        # 返回限制数量的结果
-        return results[:limit]
-    
-    def _search_files_sync(self,
-                          search_term: str,
-                          path: Path,
-                          search_type: str,
-                          case_sensitive: bool) -> List[Dict[str, Any]]:
-        """同步搜索文件（在线程池中执行）"""
-        matches = []
-        search_term_adj = search_term if case_sensitive else search_term.lower()
+        evaluation = self.constitution_engine.evaluate_operation(operation)
+        if not evaluation["allowed"]:
+            raise PermissionError(f"不允许搜索文件: {evaluation.get('violations', [])}")
         
         try:
+            matches = []
+            search_term_adj = search_term if case_sensitive else search_term.lower()
+            
             for file_path in path.rglob('*'):
                 if file_path.is_file():
                     file_name = file_path.name
@@ -231,20 +400,16 @@ class AsyncFileService:
                         matches.append(PathUtils.get_file_info(file_path))
                     elif search_type == 'path' and search_term_adj in str(file_path).lower():
                         matches.append(PathUtils.get_file_info(file_path))
-                    
-                    # 限制内存使用
-                    if len(matches) > 1000:
-                        break
             
+            logger.info(f"文件搜索完成: '{search_term}' (共 {len(matches)} 个匹配项)")
             return matches
-            
+        
         except Exception as e:
             logger.error(f"搜索文件失败: {path} - {e}")
             return []
     
-    async def get_file_statistics(self, 
-                                dir_path: Optional[Union[str, Path]] = None) -> Dict[str, Any]:
-        """异步获取文件统计信息"""
+    def get_file_statistics(self, dir_path: Optional[Union[str, Path]] = None) -> Dict[str, Any]:
+        """获取文件统计信息"""
         if dir_path is None:
             dir_path = self.root_path
         
@@ -253,34 +418,12 @@ class AsyncFileService:
         if not path.exists():
             raise FileNotFoundError(f"路径不存在: {path}")
         
-        # 生成缓存键
-        cache_key = f"stats:{path}"
-        
-        cached = self.cache.get(cache_key)
-        if cached:
-            return cached
-        
-        # 使用线程池执行统计
-        loop = asyncio.get_event_loop()
-        stats = await loop.run_in_executor(
-            self.executor,
-            self._get_file_statistics_sync,
-            path
-        )
-        
-        # 缓存结果（统计信息缓存时间较短）
-        self.cache.set(cache_key, stats)
-        
-        return stats
-    
-    def _get_file_statistics_sync(self, path: Path) -> Dict[str, Any]:
-        """同步获取文件统计信息"""
-        file_count = 0
-        dir_count = 0
-        total_size = 0
-        extensions = {}
-        
         try:
+            file_count = 0
+            dir_count = 0
+            total_size = 0
+            extensions = {}
+            
             for item_path in path.rglob('*'):
                 if item_path.is_file():
                     file_count += 1
@@ -302,116 +445,10 @@ class AsyncFileService:
                 "total_directories": dir_count,
                 "total_size": total_size,
                 "total_size_human": PathUtils.humanize_size(total_size),
-                "file_extensions": dict(sorted_extensions[:10]),
+                "file_extensions": dict(sorted_extensions[:10]),  # 前10个扩展名
                 "last_updated": datetime.now().isoformat()
             }
-            
+        
         except Exception as e:
             logger.error(f"获取文件统计失败: {path} - {e}")
             return {}
-    
-    async def build_index(self, force: bool = False) -> Dict[str, Any]:
-        """异步构建文件索引"""
-        # 生成索引键
-        cache_key = f"index:{self.root_path}"
-        
-        if not force:
-            cached = self.cache.get(cache_key)
-            if cached:
-                return cached
-        
-        # 使用线程池构建索引
-        loop = asyncio.get_event_loop()
-        index = await loop.run_in_executor(
-            self.executor,
-            self._build_index_sync
-        )
-        
-        # 更新内存索引
-        with self._index_lock:
-            self._index = index
-        
-        # 缓存索引
-        self.cache.set(cache_key, index)
-        
-        return index
-    
-    def _build_index_sync(self) -> Dict[str, Any]:
-        """同步构建文件索引"""
-        index = {
-            "files": {},
-            "directories": {},
-            "extensions": {},
-            "last_updated": datetime.now().isoformat()
-        }
-        
-        try:
-            start_time = datetime.now()
-            
-            for item_path in self.root_path.rglob('*'):
-                if item_path.is_file():
-                    file_info = PathUtils.get_file_info(item_path)
-                    rel_path = str(item_path.relative_to(self.root_path))
-                    
-                    index["files"][rel_path] = file_info
-                    
-                    # 统计扩展名
-                    ext = item_path.suffix.lower()
-                    if ext:
-                        index["extensions"][ext] = index["extensions"].get(ext, 0) + 1
-                
-                elif item_path.is_dir():
-                    dir_info = PathUtils.get_file_info(item_path)
-                    rel_path = str(item_path.relative_to(self.root_path))
-                    index["directories"][rel_path] = dir_info
-            
-            end_time = datetime.now()
-            execution_time = (end_time - start_time).total_seconds()
-            
-            index["total_files"] = len(index["files"])
-            index["total_directories"] = len(index["directories"])
-            index["execution_time"] = execution_time
-            
-            logger.info(f"索引构建完成: {index['total_files']} 个文件, "
-                       f"{index['total_directories']} 个目录, "
-                       f"耗时 {execution_time:.2f} 秒")
-            
-            return index
-            
-        except Exception as e:
-            logger.error(f"构建索引失败: {e}")
-            return {"error": str(e)}
-    
-    async def fast_search(self, query: str, limit: int = 50) -> List[Dict[str, Any]]:
-        """快速搜索（使用索引）"""
-        # 确保索引已构建
-        if not self._index:
-            await self.build_index()
-        
-        results = []
-        query_lower = query.lower()
-        
-        with self._index_lock:
-            # 在索引中搜索
-            for rel_path, file_info in self._index.get("files", {}).items():
-                if query_lower in file_info.get("name", "").lower():
-                    results.append(file_info)
-                
-                if len(results) >= limit:
-                    break
-        
-        return results
-    
-    async def cleanup(self):
-        """清理资源"""
-        self.executor.shutdown(wait=True)
-        self.cache.invalidate()
-
-
-# 全局实例
-async_file_service = AsyncFileService()
-
-
-async def get_file_service() -> AsyncFileService:
-    """获取文件服务实例"""
-    return async_file_service

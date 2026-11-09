@@ -270,8 +270,18 @@ class TaskDispatcher:
     async def handle_search(self, intent: Dict[str, Any]) -> Dict[str, Any]:
         """处理搜索操作"""
         try:
-            # 修复：支持多种参数名
-            query = intent.get("target", "") or intent.get("parameters", {}).get("target", "") or intent.get("parameters", {}).get("query", "")
+            # 修改：如果 query 为空字符串，提供友好的引导信息
+            if query == "":
+                return {
+                    "success": True,  # 修改为 True，表示解析成功
+                    "message": "请输入搜索关键词，例如：search test 或 搜索文档",
+                    "action": "search",
+                    "requires_input": True,
+                    "data": [],
+                    "text_output": "请输入搜索关键词：\n例如：\n- search test\n- 搜索文档\n- 查找图片"
+                }
+            
+            
             
             if not query:
                 return {

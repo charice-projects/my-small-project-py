@@ -194,9 +194,9 @@ def merge_excel_files(input_folder, output_file, header_rows=2):
 # 使用示例
 if __name__ == "__main__":
     # 配置参数
-    input_folder = "C:\Users\Administrator\Desktop\123\九江银行.xlsx"  # Excel文件夹路径
-    output_file = "C:\Users\Administrator\Desktop\123\九江银行_合并.xlsx"        # 输出文件名
+    input_folder = "E:\我的下载\浏览器下载\微信支付交易明细证明(20250501-20260401)_20260415170656.xlsx"  # Excel文件夹路径
+    output_file = "‪C:\Users\charice\Desktop\流水_合并.xlsx"        # 输出文件名
     check_rows = 2                             # 检查的行数(可修改)
-    
+
     # 执行合并
     merge_excel_files(input_folder, output_file, header_rows=check_rows)

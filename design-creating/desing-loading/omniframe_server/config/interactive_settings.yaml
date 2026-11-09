@@ -1,0 +1,25 @@
+
+# 交互式设置
+interactive:
+  # 搜索设置
+  search:
+    enable_interactive_mode: true
+    default_prompt: "请输入搜索关键词"
+    suggestions:
+      - "文档 - 搜索文档文件"
+      - "图片 - 搜索图片文件"
+      - "代码 - 搜索代码文件"
+      - "最近修改 - 搜索最近修改的文件"
+    session_timeout_minutes: 10
+  
+  # 通用设置
+  general:
+    max_suggestions: 5
+    enable_autocomplete: true
+    show_examples: true
+  
+  # 错误处理
+  error_handling:
+    friendly_errors: true
+    provide_solutions: true
+    show_help_links: true

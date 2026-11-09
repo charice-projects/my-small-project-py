@@ -213,11 +213,16 @@ class IntentParser:
                             if query:
                                 query_field = intent_config.get("query_field", "query")
                                 params[query_field] = query
+
                         
-                        if intent_config.get("extract_target"):  
-                            target = self._extract_target(original_command, match)  
-                            if target:  
-                                params["target"] = target
+                        # 修改：处理 NEED_KEYWORD 特殊标记
+                        if intent_config["action"] == "search" and params.get("target") == "NEED_KEYWORD":
+                            return self._create_response(
+                                action="search",
+                                parameters={"requires_keyword": True},
+                                message="请输入搜索关键词",
+                                original_command=original_command
+                            )
                         
                         # 特殊处理：对于搜索文档、查找图片这种没有提取到参数的情况
                         if intent_config["action"] == "search" and "target" not in params:
@@ -283,9 +288,10 @@ class IntentParser:
             if key in command_lower:
                 return value
         
-        # 如果是英文search命令但没有参数，返回空字符串
+        
+        # 修改：如果是单独的 search 命令，返回特殊标记而不是空字符串
         if command_lower == "search":
-            return ""
+        return "NEED_KEYWORD"  # 特殊标记，表示需要关键词
         
         return None
     

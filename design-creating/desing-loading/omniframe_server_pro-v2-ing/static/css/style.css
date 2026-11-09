@@ -1,0 +1,255 @@
+/* Omniframe Server 样式 */
+
+:root {
+    --primary-color: #4361ee;
+    --secondary-color: #3a0ca3;
+    --success-color: #4cc9f0;
+    --danger-color: #f72585;
+    --warning-color: #f8961e;
+    --info-color: #7209b7;
+    --light-color: #f8f9fa;
+    --dark-color: #212529;
+}
+
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background-color: #f5f7fb;
+    min-height: 100vh;
+}
+
+/* 卡片样式 */
+.card {
+    border: none;
+    border-radius: 10px;
+    transition: transform 0.2s ease-in-out;
+}
+
+.card:hover {
+    transform: translateY(-2px);
+}
+
+.card-header {
+    border-radius: 10px 10px 0 0 !important;
+    font-weight: 600;
+}
+
+/* 命令历史项 */
+.history-item {
+    border-left: 3px solid transparent;
+    transition: all 0.2s;
+    cursor: pointer;
+}
+
+.history-item:hover {
+    background-color: #f8f9fa;
+    border-left-color: var(--primary-color);
+}
+
+.history-item.success {
+    border-left-color: var(--success-color);
+}
+
+.history-item.error {
+    border-left-color: var(--danger-color);
+}
+
+/* 结果项 */
+.result-item {
+    padding: 1rem;
+    margin-bottom: 1rem;
+    border-radius: 8px;
+    background: white;
+    border-left: 4px solid var(--primary-color);
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+
+.result-item.file {
+    border-left-color: var(--info-color);
+}
+
+.result-item.directory {
+    border-left-color: var(--warning-color);
+}
+
+.result-item.warning {
+    border-left-color: var(--warning-color);
+    background-color: #fff3cd;
+}
+
+.result-item.error {
+    border-left-color: var(--danger-color);
+    background-color: #f8d7da;
+}
+
+.result-item.success {
+    border-left-color: var(--success-color);
+    background-color: #d1e7dd;
+}
+
+/* 文件信息 */
+.file-info {
+    font-size: 0.875rem;
+}
+
+.file-info .badge {
+    font-size: 0.75em;
+}
+
+.file-name {
+    font-weight: 600;
+    color: var(--dark-color);
+}
+
+.file-path {
+    color: #6c757d;
+    font-family: monospace;
+    font-size: 0.8rem;
+    word-break: break-all;
+}
+
+/* 操作按钮 */
+.btn-action {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.875rem;
+    border-radius: 4px;
+}
+
+.btn-action:hover {
+    transform: scale(1.05);
+}
+
+/* 加载动画 */
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+}
+
+.pulse {
+    animation: pulse 2s infinite;
+}
+
+/* 滚动条美化 */
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb {
+    background: #c1c1c1;
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: #a8a8a8;
+}
+
+/* 响应式调整 */
+@media (max-width: 768px) {
+    .card-body {
+        padding: 1rem;
+    }
+    
+    #command-input {
+        font-size: 0.9rem;
+    }
+    
+    .btn-sm {
+        padding: 0.25rem 0.5rem;
+        font-size: 0.8rem;
+    }
+}
+
+/* 命令输入框焦点效果 */
+#command-input:focus {
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 0.25rem rgba(67, 97, 238, 0.25);
+}
+
+/* 状态指示器 */
+.status-indicator {
+    display: inline-block;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    margin-right: 5px;
+}
+
+.status-online {
+    background-color: #28a745;
+    box-shadow: 0 0 10px #28a745;
+}
+
+.status-offline {
+    background-color: #dc3545;
+}
+
+.status-warning {
+    background-color: #ffc107;
+}
+
+/* 进度条 */
+.progress-thin {
+    height: 4px;
+    border-radius: 2px;
+}
+
+/* 文件树样式 */
+.file-tree {
+    list-style: none;
+    padding-left: 0;
+}
+
+.file-tree li {
+    padding: 2px 0;
+}
+
+.file-tree ul {
+    padding-left: 20px;
+    list-style: none;
+}
+
+.tree-toggle {
+    cursor: pointer;
+    width: 16px;
+    display: inline-block;
+    text-align: center;
+}
+
+.tree-icon {
+    width: 16px;
+    display: inline-block;
+    text-align: center;
+    margin-right: 4px;
+}
+
+/* 代码块样式 */
+.code-block {
+    font-family: 'Courier New', monospace;
+    background-color: #f8f9fa;
+    border: 1px solid #dee2e6;
+    border-radius: 4px;
+    padding: 10px;
+    font-size: 0.9rem;
+    overflow-x: auto;
+    margin: 10px 0;
+}
+
+/* 标签样式 */
+.tag {
+    display: inline-block;
+    padding: 0.25em 0.5em;
+    font-size: 0.75em;
+    border-radius: 12px;
+    margin-right: 0.5em;
+    margin-bottom: 0.5em;
+}
+
+.tag-file { background-color: #e7f1ff; color: #0056b3; }
+.tag-image { background-color: #fff3cd; color: #856404; }
+.tag-document { background-color: #d4edda; color: #155724; }
+.tag-code { background-color: #d1ecf1; color: #0c5460; }

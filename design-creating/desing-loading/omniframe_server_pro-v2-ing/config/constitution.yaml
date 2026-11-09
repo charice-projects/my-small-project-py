@@ -1,0 +1,95 @@
+# Omniframe 宪法规则
+# 所有AI操作都必须遵循这些规则
+
+version: "1.0"
+last_updated: "2024-01-01"
+
+# 基本原则
+principles:
+  - name: "人类主权"
+    description: "人类拥有最终决策权，AI仅作为执行工具"
+    enforcement: "required"
+    
+  - name: "无害原则"
+    description: "AI不得执行可能对系统或数据造成损害的操作"
+    enforcement: "required"
+    
+  - name: "透明原则"
+    description: "所有操作必须记录并可追溯"
+    enforcement: "required"
+
+# 具体规则
+rules:
+  - id: "RULE-001"
+    name: "删除保护"
+    description: "删除操作必须经过明确确认"
+    condition: "operation.type == 'delete'"
+    action: "require_confirmation"
+    parameters:
+      confirmation_type: "explicit"
+      message: "您确定要删除 {{target}} 吗？此操作不可撤销。"
+    priority: "high"
+    
+  - id: "RULE-002"
+    name: "系统文件保护"
+    description: "禁止操作系统关键目录"
+    condition: |
+      operation.target_path.startswith('/') or
+      operation.target_path.startswith('C:\\Windows') or
+      operation.target_path.startswith('C:\\Program Files') or
+      'system32' in operation.target_path.lower()
+    action: "block"
+    parameters:
+      message: "禁止操作系统关键文件"
+    priority: "critical"
+    
+  - id: "RULE-003"
+    name: "可执行文件限制"
+    description: "限制操作可执行文件"
+    condition: "operation.target_path.endswith(('.exe', '.bat', '.cmd', '.ps1', '.sh'))"
+    action: "require_confirmation"
+    parameters:
+      message: "操作可执行文件可能存在风险，请确认您了解其来源。"
+    priority: "medium"
+    
+  - id: "RULE-004"
+    name: "批量操作限制"
+    description: "批量操作需要额外确认"
+    condition: "operation.file_count > 10"
+    action: "require_confirmation"
+    parameters:
+      message: "您即将批量操作 {{operation.file_count}} 个文件，请确认。"
+    priority: "medium"
+    
+  - id: "RULE-005"
+    name: "根目录操作限制"
+    description: "对根目录的操作需要确认"
+    condition: "operation.target_path == config.root_path"
+    action: "require_confirmation"
+    parameters:
+      message: "您正在对工作空间根目录进行操作，这可能影响所有文件。"
+    priority: "high"
+    
+  - id: "RULE-006"
+    name: "操作审计"
+    description: "所有操作必须记录"
+    condition: "always"
+    action: "log_operation"
+    parameters:
+      log_level: "INFO"
+    priority: "low"
+
+# 工作区保护目录（可动态添加）
+protected_directories:
+  - "/system"
+  - "/backup"
+  - "/archives"
+  - "/.git"
+  - "/.svn"
+
+# 安全例外（需要特别授权的操作）
+security_exceptions:
+  - operation: "system_shutdown"
+    requires: "admin_approval"
+  - operation: "format_disk"
+    requires: "multiple_confirmations"

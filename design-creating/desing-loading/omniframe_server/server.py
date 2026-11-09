@@ -29,10 +29,6 @@ from api.websocket import websocket_endpoint
 # 导入服务
 from services.monitor_service import MonitorService
 
-# 引入版本管理
-from core.version_manager import VersionManager
-version_manager = VersionManager()
-
 
 def get_local_ip():
     """获取本机IP地址"""
